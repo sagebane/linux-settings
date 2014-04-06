@@ -231,6 +231,7 @@ uniquify-separator ":")
 (defalias 'ff "find-file $1")
 
 (global-set-key "\C-x\C-k" 'kill-region)
+(global-set-key "\C-x\C-b" 'ibuffer-list-buffers)
 (desktop-save-mode 1)
 
 ; Stunnel
@@ -253,3 +254,6 @@ uniquify-separator ":")
 (setq mew-name "qifengmao")
 (setq mew-user "zuijiuru")
 (setq mew-mail-domain "gmail.com")
+
+;; use Shift+arrow_keys to move cursor around split panes
+(windmove-default-keybindings)

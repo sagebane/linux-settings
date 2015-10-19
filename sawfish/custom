@@ -1,0 +1,5 @@
+;; sawfish user customization -- do not edit by hand!
+;; sawfish version 1.5.3, written Tue Sep 22 15:15:23 2015
+
+(custom-set-typed-variable (quote default-frame-style) (quote microGUI) (quote frame-style))
+(custom-set-typed-variable (quote focus-windows-when-mapped) (quote ()) (quote boolean))

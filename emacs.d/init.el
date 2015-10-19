@@ -1,61 +1,52 @@
- (when (>= emacs-major-version 24)
-   (require 'package)
-   (package-initialize)
-   (add-to-list 'package-archives '("melpa" . "http://melpa.milkbox.net/packages/") t)
-   )
-(require 'hideshow-org)
-(require 'dired+)
-;;
-;; basic comfiguration
-;;
-(menu-bar-mode 0)
-(tool-bar-mode 0)
-(scroll-bar-mode 0)
-(blink-cursor-mode 0) 
-(column-number-mode 1)
-(ido-mode 1)
-(show-paren-mode t) ;; 匹配括号高亮
+(require 'package)
+(add-to-list 'package-archives
+	     '("melpa" . "https://melpa.org/packages/"))
+;;	     '("melpa-stable" . "https://stable.melpa.org/packages/") t)
+(when (< emacs-major-version 24)
+  ;; For important compatibility libraries like cl-lib
+  (add-to-list 'package-archives '("gnu" . "http://elpa.gnu.org/packages/")))
+(package-initialize) ;; You might already have this line
 
-;; share clipboard with X, 
-(setq x-select-enable-clipboard t)
-;; share clipboard with app, suite for "C-c"
-(setq x-select-enable-primary t)
+(setq settings-dir
+      (expand-file-name "settings" user-emacs-directory))
+(add-to-list 'load-path settings-dir)
 
-(display-time-mode 1)
-(setq display-time-24hr-format t) 
-(setq display-time-day-and-date t)
+(require 'setup-default)
+(require 'setup-dict)
+;(require 'setup-paredit)
+(eval-after-load 'ido '(require 'setup-ido))
+(eval-after-load 'org '(require 'setup-org))
 
-(setq frame-title-format
-      '("emacs:%S" (buffer-file-name "%f"
-			       (dired-directory dired-directory "%b"))))
+;; Visual regexp
+(require 'visual-regexp)
+(define-key global-map (kbd "C-c q") 'vr/query-replace)
+(define-key global-map (kbd "C-c r") 'vr/replace)
 
-(load-theme 'nzenburn t)
+(define-key global-map (kbd "C-c m") 'vr/mc-mark)
 
-;(require 'solarized-dark-theme)
-;(require 'color-theme)
-;(color-theme-comidia)
+;; Fill column indicator
+(require 'fill-column-indicator)
+(setq fci-rule-color "#111122")
 
-(cscope-setup)
+;; Smart M-x is smart
+(require 'smex)
+(smex-initialize)
 
-;(set-default-font "DejaVu Sans Mono-10")
-(set-default-font "Droid Sans Mono-10")
-;; 最短时间显示指令序列
-(setq echo-keystrokes 0.1)
-(setq x-select-enable-clipboard t)
-(setq inhibit-startup-message t)
-(fset 'yes-or-no-p 'y-or-n-p)
-;; 防止页面滚动时跳动,scroll-margin 3可以在靠近屏幕边沿3行时就开始滚动,可
-;; 以很好的看到上下文
-(setq scroll-margin 3
-      scroll-conservatively 10000)
-(setq ring-bell-function 'ignore)
-(mouse-avoidance-mode 'animate)
+;; Smart M-x
+(global-set-key (kbd "M-x") 'smex)
+(global-set-key (kbd "M-X") 'smex-major-mode-commands)
+(global-set-key (kbd "C-c C-c M-x") 'execute-extended-command)
 
-;;c程序风格
-(add-hook 'c-mode-hook 'linux-c-mode)
-(add-hook 'c++-mode-hook 'linux-cpp-mode)
-(add-hook 'c-mode-hook 'hs-org/minor-mode)
-(add-hook 'c++-mode-hook 'hs-org/minor-mode)
+(require 'multiple-cursors)
+(global-set-key (kbd "C-c c c") 'mc/edit-lines)
+(global-set-key (kbd "C->") 'mc/mark-next-like-this)
+(global-set-key (kbd "C-<") 'mc/mark-previous-like-this)
+(global-set-key (kbd "C-c C-<") 'mc/mark-all-like-this)
+
+(require 'setup-smartparens)
+
+(require 'xcscope)
+;(cscope-setup)
 
 (defun linux-c-mode()
   ;; 将回车代替C-j的功能，换行的同时对齐
@@ -63,18 +54,20 @@
   (interactive)
   ;; 设置C程序的对齐风格
   (c-set-style "K&R")
-;; 自动模式，在此种模式下当你键入{时，会自动根据你设置的对齐风格对齐
+  ;; 自动模式，在此种模式下当你键入{时，会自动根据你设置的对齐风格对齐
   (c-toggle-auto-state)
+  ;; TAB键的宽度
+  (setq c-basic-offset 4)
   ;; 此模式下，当按Backspace时会删除最多的空格
   (c-toggle-hungry-state)
-;; TAB键的宽度设置为8
-  (setq c-basic-offset 8)
   ;; 在菜单中加入当前Buffer的函数索引
   (imenu-add-menubar-index)
   ;; 在状态条上显示当前光标在哪个函数体内部
   (which-function-mode)
-  (c-toggle-auto-newline 1)
+  (c-toggle-auto-newline 0)
+  (c-set-offset 'inextern-lang 0);;在extern c{} 中正常对齐
   )
+
 (defun linux-cpp-mode()
   (define-key c++-mode-map [return] 'newline-and-indent)
   (define-key c++-mode-map [(control c) (c)] 'compile)
@@ -82,138 +75,117 @@
   (c-set-style "K&R")
   (c-toggle-auto-state)
   (c-toggle-hungry-state)
-  (setq c-basic-offset 8)
+  (setq c-basic-offset 4)
   (imenu-add-menubar-index)
   (which-function-mode)
+  (c-set-offset 'inextern-lang 0);;在extern c{} 中正常对齐
   )
 
-(global-set-key (kbd "<f8>") 'eshell)
-(global-set-key (kbd "<f5>") 'grep)
-(global-set-key (kbd "<f7>") 'compile)
-(put 'dired-find-alternate-file 'disabled nil)
+(require 'hideshow-org)
 
-(require 'auto-complete-config)  
-(add-to-list 'ac-dictionary-directories "~/.emacs.d/ac-dict")  
-(ac-config-default)  
+;;c程序风格
+(add-hook 'c-mode-common-hook 'linux-c-mode)
+(add-hook 'c-mode-hook 'hs-org/minor-mode)
+(add-hook 'c-mode-hook 'cscope-minor-mode)
+
+;;; yasnippet
+;;; should be loaded before auto complete so that they can work together
+(require 'yasnippet)
+(yas-global-mode 1)
+
+;; auto complete mode
+;; should be loaded after yasnippet so that they can work together
+;(require 'auto-complete-clang)
+;(define-key c-mode-map (kbd "C-S-<return>") 'ac-complete-clang)
+
+(require 'auto-complete-config)
+(add-to-list 'ac-dictionary-directories "~/.emacs.d/ac-dict")
+(ac-config-default)
+;;; set the trigger key so that it can work together with yasnippet on tab key,
+;;; if the word exists in yasnippet, pressing tab will cause yasnippet to
+;;; activate, otherwise, auto-complete will
+(ac-set-trigger-key "TAB")
+(ac-set-trigger-key "<tab>")
 
 ;; every buffer should have a unique name 
 (require 'uniquify)
 (setq
-uniquify-buffer-name-style 'post-forward
-uniquify-separator ":")
+ uniquify-buffer-name-style 'post-forward
+ uniquify-separator ":")
+
+(add-hook 'c-mode-common-hook
+	  (lambda ()
+	    (when (derived-mode-p 'c-mode 'c++-mode 'java-mode)
+	      (ggtags-mode 1))))
+
+
+;;; This is the binary name of my scheme implementation  
+(setq scheme-program-name "scm")
+
+;(require 'flyspell-lazy)
+;(flyspell-lazy-mode 1)
+;(flyspell-mode 1)
+
+;; hippie expand is dabbrev expand on steroids
+(setq hippie-expand-try-functions-list '(try-expand-dabbrev
+                                         try-expand-dabbrev-all-buffers
+                                         try-expand-dabbrev-from-kill
+                                         try-complete-file-name-partially
+                                         try-complete-file-name
+                                         try-expand-all-abbrevs
+                                         try-expand-list
+                                         try-expand-line
+                                         try-complete-lisp-symbol-partially
+                                         try-complete-lisp-symbol))
+(global-set-key (kbd "M-/") 'hippie-expand)
+
+(global-set-key (kbd "C-x o") 'ace-window)
+
+
+(global-set-key (kbd "C-;") 'avy-goto-char-2)
+(global-set-key (kbd "M-g f") 'avy-goto-line)
+(global-set-key (kbd "C-'") 'avy-isearch)
+(global-set-key (kbd "M-g f") 'avy-goto-line)
+
+
+(add-hook 'emacs-lisp-mode-hook 'rainbow-delimiters-mode)
+(add-hook 'c-mode-hook 'rainbow-delimiters-mode)
+
+;;(require 'diminish)
+;;(diminish 'abbrev-mode "Abv")
+;;(diminish 'hs-org/minor-mode)
 ;;
-;; org-mode 
 ;;
-(require 'ox-latex)
-(require 'ox-beamer)
-(setq org-latex-coding-system 'utf-8)
+;;(eval-after-load "yasnippet" '(diminish 'yas-minor-mode))
+;;(eval-after-load "eldoc" '(diminish 'eldoc-mode))
+;;(eval-after-load "paredit" '(diminish 'paredit-mode))
+;;(eval-after-load "tagedit" '(diminish 'tagedit-mode))
+;;(eval-after-load "elisp-slime-nav" '(diminish 'elisp-slime-nav-mode))
+;;(eval-after-load "skewer-mode" '(diminish 'skewer-mode))
+;;(eval-after-load "skewer-css" '(diminish 'skewer-css-mode))
+;;(eval-after-load "skewer-html" '(diminish 'skewer-html-mode))
+;;(eval-after-load "smartparens" '(diminish 'smartparens-mode))
+;;(eval-after-load "guide-key" '(diminish 'guide-key-mode))
+;;(eval-after-load "whitespace-cleanup-mode" '(diminish 'whitespace-cleanup-mode))
+;;(eval-after-load "subword" '(diminish 'subword-mode))
 
-(setf org-latex-default-packages-alist
-      (remove '("AUTO" "inputenc" t) org-latex-default-packages-alist))
-(setf org-latex-default-packages-alist
-      (remove '("T1" "fontenc" t) org-latex-default-packages-alist))
+(global-set-key (kbd "C-x w") 'elfeed)
 
-(setq org-latex-pdf-process '("xelatex -shell-escape -pdf -quiet %f"
-			      "xelatex -shell-escape -pdf -quiet %f"))
-(setq org-latex-packages-alist
-       '("\\usepackage{fontspec}
-	\\XeTeXlinebreaklocale ``zh''
-	\\XeTeXlinebreakskip = 0pt plus 1pt minus 0.1pt
-	\\newcommand\\fontnamehei{WenQuanYi Zen Hei}
-	\\newcommand\\fontnamesong{AR PL UMing CN}
-	\\newcommand\\fontnamekai{AR PL KaitiM GB}
-	\\newcommand\\fontnamemono{FreeMono}
-	\\newcommand\\fontnameroman{FreeSans}
-	\\setmainfont[BoldFont=\\fontnamehei]{\\fontnamesong}
-	\\setsansfont[BoldFont=\\fontnamehei]{\\fontnamekai}
-	\\setmonofont{\\fontnamemono}
-	\\setromanfont[BoldFont=\\fontnamehei]{\\fontnamesong}
-
-\\makeatletter
-\\def\\verbatim@font{\\rmfamily\\small} %verbatim中使用roman字体族
-\\makeatother
-"))
-(setq org-export-latex-listings t)
-;(add-to-list 'org-latex-packages-alist '("" "xcolor"))
-(add-to-list 'org-latex-packages-alist '("" "minted"))
-(setq org-latex-listings 'minted)
-
-
-(add-to-list 'org-latex-classes 
-	     '("cn-article"
-		"\\documentclass{article}
-\\usepackage{xcolor}
-\\usepackage{geometry}
-\\geometry{left=1.5cm,right=1.5cm,top=1.5cm,bottom=1.5cm}"
-		("\\section{%s}" . "\\section*{%s}")
-		("\\subsection{%s}" . "\\subsection*{%s}")
-		("\\subsubsection{%s}" . "\\subsubsection*{%s}")
-		("\\paragraph{%s}" . "\\paragraph*{%s}")
-		("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
-
-(add-to-list 'org-latex-classes 
-	     '("beamer"
-		"\\documentclass\[presentation\]\{beamer\}"
-		("\\section\{%s\}" . "\\section*\{%s\}")
-		("\\subsection\{%s\}" . "\\subsection*\{%s\}")
-		("\\subsubsection\{%s\}" . "\\subsubsection*\{%s\}")))
-
-(setq org-latex-minted-options
-      '(
-;;	("bgcolor" "blue")
-
-))
-
- (defun org-screenshot()
-;; "Take a screenshot into a unique-named file in the current buffer file 
-;; directory and insert a link to this file."
-   (interactive)
-   (setq filename
-	 (concat (make-temp-name  
-		  (concat (file-name-directory (buffer-file-name)) "images/" ) ) ".png"))
-   (if (file-accessible-directory-p (concat (file-name-directory (buffer-file-name)) "images/"))
-       nil (make-directory "images"))
-   (call-process-shell-command "scrot" nil nil nil nil "-s" (concat filename ))
-    (insert (concat "[["  filename "]]"))
-    (org-toggle-inline-images))
-
-(global-set-key (kbd "C-c d") 'kid-sdcv-to-buffer)
-(defun kid-sdcv-to-buffer ()
-  (interactive)
-  (let ((word (if mark-active
-                  (buffer-substring-no-properties (region-beginning) (region-end))
-		(current-word nil t))))
-    (setq word (read-string (format "Search the dictionary for (default %s): " word)
-                            nil nil word))
-
-    (set-buffer (get-buffer-create "*sdcv*"))
-    (buffer-disable-undo)
-    (erase-buffer)
-    (let ((process (start-process-shell-command "sdcv" "*sdcv*" "sdcv" "-n" word)))
-      (set-process-sentinel
-       process
-       (lambda (process signal)
-         (when (memq (process-status process) '(exit signal))
-           (unless (string= (buffer-name) "*sdcv*")
-;             (setq kid-sdcv-window-configuration (current-window-configuration))
-;	     (split-window-below)
-             (switch-to-buffer-other-window "*sdcv*")
-             (local-set-key (kbd "d") 'kid-sdcv-to-buffer)
-             (local-set-key (kbd "q") (lambda ()
-                                        (interactive)
-                                        (bury-buffer)
-                                        (unless (null (cdr (window-list))) ; only one window
-                                          (delete-window)))))
-           (goto-char (point-min))))))))
-
+(setq elfeed-feeds
+      '("http://nullprogram.com/feed/"
+        "http://www.terminally-incoherent.com/blog/feed/"))
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(graphviz-dot-preview-extension "pdf")
- '(org-file-apps (quote ((auto-mode . emacs) ("\\.mm\\'" . default) ("\\.x?html?\\'" . default) ("\\.pdf\\'" . "evince %s")))))
-
+ '(cfs--current-profile-name "profile3" t)
+ '(custom-safe-themes
+   (quote
+    ("c74e83f8aa4c78a121b52146eadb792c9facc5b1f02c917e3dbb454fca931223" "a27c00821ccfd5a78b01e4f35dc056706dd9ede09a8b90c6955ae6a390eb1c1e" "3c83b3676d796422704082049fc38b6966bcad960f896669dfc21a7a37a748fa" default)))
+ '(elfeed-feeds
+   (quote
+    ("http://feeds.feedburner.com/ruanyifeng" "http://feeds.feedburner.com/yizhe" "http://feed.mifengtd.cn/" "http://feed.feedsky.com/tektalk" "http://www.geekonomics10000.com/feed " "http://feeds2.feedburner.com/xumathena" "http://coolshell.cn/feed " "http://nullprogram.com/feed/" "http://www.terminally-incoherent.com/blog/feed/")) t))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -221,39 +193,8 @@ uniquify-separator ":")
  ;; If there is more than one, they won't work right.
  )
 
-(require 'eshell)
-(require 'em-smart)
-(setq eshell-where-to-jump 'begin)
-(setq eshell-review-quick-commands nil)
-(setq eshell-smart-space-goes-to-end t)
 
-(defalias 'img (lambda(img)(propertize "Image" (quote display) (create-image (expand-file-name img)))))
-(defalias 'ff "find-file $1")
+(register-input-method
+ "chinese-wbim" "euc-cn" 'chinese-wbim-use-package
+ "五笔" "汉字五笔输入法" "wb.txt")
 
-(global-set-key "\C-x\C-k" 'kill-region)
-(global-set-key "\C-x\C-b" 'ibuffer-list-buffers)
-(desktop-save-mode 1)
-
-; Stunnel
-(setq mew-prog-ssl "/usr/bin/stunnel4")
-; IMAP for Gmail
-(setq mew-proto "%")
-(setq mew-imap-server "imap.gmail.com")
-(setq mew-imap-user "zuijiuru@gmail.com")
-(setq mew-imap-auth  t)
-(setq mew-imap-ssl t)
-(setq mew-imap-ssl-port "993")
-(setq mew-smtp-auth t)
-(setq mew-smtp-ssl t)
-(setq mew-smtp-ssl-port "465")
-(setq mew-smtp-user "zuijiuru@gmail.com")
-(setq mew-smtp-server "smtp.gmail.com")
-(setq mew-fcc "%Sent") ; 
-(setq mew-use-cached-passwd t)
-(setq mew-ssl-verify-level 0)
-(setq mew-name "qifengmao")
-(setq mew-user "zuijiuru")
-(setq mew-mail-domain "gmail.com")
-
-;; use Shift+arrow_keys to move cursor around split panes
-(windmove-default-keybindings)

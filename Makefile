@@ -4,7 +4,7 @@ PWD=$(shell pwd)
 sync:
 	rsync -av $(HOME)/.sawfish/ $(PWD)/sawfish/
 	rsync -av $(HOME)/.emacs.d/init.el $(PWD)/emacs.d/
-	rsync -av $(HOME)/.emacs.d/settings/ $(PWD)/emacs.d/settings/
+	rsync -av $(HOME)/.emacs.d/emacs.org $(PWD)/emacs.d/
 	rsync -av $(HOME)/.screenrc $(PWD)/screenrc
 
 install:

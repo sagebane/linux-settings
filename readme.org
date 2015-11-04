@@ -1,0 +1,12 @@
+
+
+* linux-settings
+  profile used in linux, currently include a sawfishrc and a init.el
+
+** emacs
+   sync the configuration from =~/.emacs.d=:
+   #+BEGIN_SRC sh
+     make sync
+   #+END_SRC
+
+   
